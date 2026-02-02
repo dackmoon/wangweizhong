@@ -46,9 +46,9 @@ const App = () => {
   ];
 
   const shitRanking = [
-    { rank: 1, name: '老张', amount: '12.5kg', desc: '在生产环境执行了没有 WHERE 条件的 DELETE，差点让公司倒闭。' },
-    { rank: 2, name: '小李', amount: '8.2kg', desc: '把测试环境的鉴权密钥硬编码提到了 GitHub 公共仓库。' },
-    { rank: 3, name: '阿强', amount: '5.7kg', desc: '写了一个死循环，把 128 核的服务器 CPU 跑满了三小时。' },
+    { rank: 1, name: 'CC', amount: '12.5kg', desc: '模型MMLU分数远低于预期。' },
+    { rank: 2, name: 'TT', amount: '8.2kg', desc: 'M4模型幻觉过大' },
+    { rank: 3, name: 'MM', amount: '5.7kg', desc: '项目delay了一周' },
   ];
 
   // --- 轮播逻辑 ---
