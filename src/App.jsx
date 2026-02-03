@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell 
+  PieChart, Pie, Cell, AreaChart, Area, BarChart, Bar
 } from 'recharts';
 import { 
   Activity, 
@@ -17,18 +17,71 @@ import {
   ChevronRight,
   Video,
   Radio,
-  Maximize2
+  Maximize2,
+  Zap,
+  BarChart2,
+  Target,
+  Circle,
+  TrendingDown
 } from 'lucide-react';
 
 const App = () => {
   // --- 状态管理 ---
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [pretrainSlide, setPretrainSlide] = useState(0); // 0: Loss, 1: Benchmarks
 
-  // --- 模拟数据 ---
-  const trainingData = [
-    { name: 'LLM模型 (V1.5)', progress: 78, status: 'Training', color: '#3b82f6', icon: <Cpu className="w-6 h-6" />, eta: '12h 45m', details: 'Loss: 0.241 | Epoch: 42/50' },
-    { name: 'Audio模型 (V4.0)', progress: 42, status: 'Training', color: '#8b5cf6', icon: <Mic className="w-6 h-6" />, eta: '3d 2h', details: 'Loss: 1.05 | Epoch: 12/100' },
-  ];
+  // --- 模拟数据: M4 模型训练详情 ---
+  const m4Data = {
+    pretrain: {
+      status: 'Phase 2: Context Extension',
+      lossData: [
+        { step: '0k', val: 6.5 }, { step: '10k', val: 4.2 }, { step: '20k', val: 2.8 },
+        { step: '30k', val: 1.5 }, { step: '40k', val: 0.9 }, { step: '50k', val: 0.24 },
+        { step: '55k', val: 0.21 } 
+      ],
+      currentLoss: 0.210,
+      benchmarks: [
+        { name: 'CMMLU', score: 72.4, color: '#3b82f6' },
+        { name: 'MMLU', score: 68.9, color: '#8b5cf6' },
+        { name: 'BBH', score: 65.2, color: '#ec4899' },
+        { name: 'MATH', score: 58.7, color: '#10b981' }, // 新增第4个指标
+      ]
+    },
+    posttrain: {
+      leaderboard: [
+        { 
+          rank: 1, 
+          model: 'Qwen3-235B-A22B-Instruct-2507', 
+          metrics: { overall: 92.3, IFEval: 89.5, MMLU: 88.7 },
+          tag: 'BASELINE' 
+        },
+        { 
+          rank: 2, 
+          model: 'm4_pretrained_full_v2_ensemble_pretrained_full-Qwen3_D_0.7-iter_0006362', 
+          metrics: { overall: 91.8, IFEval: 90.2, MMLU: 87.9 },
+          tag: 'OURS' 
+        },
+        { 
+          rank: 3, 
+          model: 'm4_pretrained_full_v2_ensemble_pretrained_full-Qwen3_D_0.7-iter_0006124', 
+          metrics: { overall: 91.2, IFEval: 89.8, MMLU: 87.3 },
+          tag: 'OURS' 
+        },
+        { 
+          rank: 4, 
+          model: 'm4_pretrained_full_v2_ensemble_pretrained_full-Qwen3_D_0.7-iter_0005891', 
+          metrics: { overall: 90.5, IFEval: 88.9, MMLU: 86.8 },
+          tag: 'OURS' 
+        },
+        { 
+          rank: 5, 
+          model: 'm4_pretrained_full_v2_ensemble_pretrained_full-Qwen3_D_0.7-iter_0005652', 
+          metrics: { overall: 89.9, IFEval: 88.2, MMLU: 86.1 },
+          tag: 'OURS' 
+        },
+      ]
+    }
+  };
 
   const crawlData = {
     cn: { total: '1.2T', progress: 85, color: '#ef4444' },
@@ -51,13 +104,20 @@ const App = () => {
     { rank: 3, name: 'MM', amount: '5.7kg', desc: '项目delay了一周' },
   ];
 
-  // --- 轮播逻辑 ---
+  // --- 全局轮播逻辑 (30秒) ---
   const totalSlides = 3;
-  
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % totalSlides);
-    }, 6000);
+    }, 30000); 
+    return () => clearInterval(timer);
+  }, []);
+
+  // --- Pretrain 内部轮播逻辑 (15秒) ---
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPretrainSlide((prev) => (prev + 1) % 2);
+    }, 15000); 
     return () => clearInterval(timer);
   }, []);
 
@@ -110,55 +170,173 @@ const App = () => {
   // 轮播内容渲染
   const renderSlideContent = () => {
     switch (currentSlide) {
-      case 0: // 模型训练
+      case 0: // LLM M4 训练详情
         return (
-          <div className="h-full flex flex-col justify-center px-8 animate-fade-in">
-             <div className="flex items-center gap-3 mb-8">
+          <div className="h-full flex flex-col px-8 animate-fade-in">
+             <div className="flex items-center gap-3 mb-6 shrink-0">
               <div className="p-3 bg-blue-500/20 rounded-xl">
-                <Activity className="text-blue-400 w-8 h-8" />
+                <Cpu className="text-blue-400 w-8 h-8" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white">Model Training</h2>
-                <p className="text-slate-400">实时训练集群状态监控</p>
+                <h2 className="text-2xl font-bold text-white">LLM Model (M4) Status</h2>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                  <p className="text-slate-400 text-sm font-mono">{m4Data.pretrain.status}</p>
+                </div>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {trainingData.map((model, idx) => (
-                <div key={idx} className="bg-slate-800/30 border border-slate-700/50 p-6 rounded-2xl relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                    {model.icon}
+
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-8 min-h-0 pb-4">
+              
+              {/* Left Column: Pre-train (Internal Carousel) */}
+              <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl p-4 flex flex-col relative overflow-hidden group">
+                <div className="flex items-center justify-between gap-2 text-blue-300 mb-3 shrink-0 z-20">
+                  <div className="flex items-center gap-2">
+                    <Activity size={16} />
+                    <h3 className="font-bold uppercase text-xs tracking-wider">Pre-train Metrics</h3>
                   </div>
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-slate-900 rounded-lg text-white shadow-lg border border-slate-700">
-                        {model.icon}
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-bold text-white">{model.name}</h3>
-                        <p className="text-xs text-slate-400 font-mono">{model.details}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-black italic" style={{ color: model.color }}>{model.progress}%</div>
-                      <div className="text-xs text-slate-500 font-bold uppercase">Progress</div>
-                    </div>
-                  </div>
-                  
-                  <div className="w-full bg-slate-900 rounded-full h-4 overflow-hidden mb-3 border border-slate-700">
-                    <div 
-                      className="h-full rounded-full transition-all duration-1000 relative overflow-hidden"
-                      style={{ width: `${model.progress}%`, backgroundColor: model.color }}
-                    >
-                      <div className="absolute inset-0 bg-white/20 w-full animate-[shimmer_2s_infinite]"></div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 text-xs font-mono text-slate-400 bg-slate-900/50 w-fit px-3 py-1 rounded-full">
-                    <Clock className="w-3 h-3" />
-                    <span>ETA: <span className="text-white">{model.eta}</span></span>
+                  {/* Internal Carousel Indicators */}
+                  <div className="flex gap-1.5">
+                    <div className={`h-1.5 rounded-full transition-all duration-500 ${pretrainSlide === 0 ? 'bg-blue-400 w-4' : 'bg-slate-700 w-1.5'}`}></div>
+                    <div className={`h-1.5 rounded-full transition-all duration-500 ${pretrainSlide === 1 ? 'bg-blue-400 w-4' : 'bg-slate-700 w-1.5'}`}></div>
                   </div>
                 </div>
-              ))}
+
+                {/* Internal Carousel Content Area */}
+                <div className="flex-1 relative w-full min-h-0">
+                  
+                  {/* Slide 0: Loss Chart (Compacted Layout) */}
+                  <div className={`absolute inset-0 transition-all duration-700 ease-in-out ${pretrainSlide === 0 ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10 pointer-events-none'}`}>
+                    <div className="flex h-full items-center gap-3">
+                      {/* Left: Stats */}
+                      <div className="min-w-[90px] flex flex-col justify-center gap-1">
+                         <div>
+                            <span className="text-[9px] text-slate-500 uppercase font-bold tracking-wider">Current Loss</span>
+                            <div className="text-3xl font-black text-white tracking-tighter leading-none">{m4Data.pretrain.currentLoss}</div>
+                         </div>
+                         <div className="flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-lg w-fit">
+                            <TrendingDown size={12} className="text-emerald-400" />
+                            <span className="text-[10px] font-bold text-emerald-400">12%</span>
+                         </div>
+                         <p className="text-[9px] text-slate-500 font-mono leading-tight">vs. 10k ago</p>
+                      </div>
+
+                      {/* Right: Area Chart (Full Height) */}
+                      <div className="flex-1 h-full bg-slate-900/40 rounded-xl border border-slate-700/30 p-1 relative overflow-hidden">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={m4Data.pretrain.lossData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                            <defs>
+                              <linearGradient id="colorLoss" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.5}/>
+                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                              </linearGradient>
+                            </defs>
+                            <Tooltip 
+                              cursor={{ stroke: '#fff', strokeWidth: 1, strokeDasharray: '4 4' }}
+                              contentStyle={{backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', padding: '8px'}} 
+                              itemStyle={{fontSize: 10, fontWeight: 'bold', color: '#fff'}}
+                              labelStyle={{display: 'none'}}
+                              formatter={(value) => [value, 'Loss']}
+                            />
+                            <Area 
+                              type="monotone" 
+                              dataKey="val" 
+                              stroke="#3b82f6" 
+                              strokeWidth={2}
+                              fill="url(#colorLoss)" 
+                              animationDuration={1500}
+                            />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Slide 1: Benchmarks (4 Items Compact Layout) */}
+                  <div className={`absolute inset-0 transition-all duration-700 ease-in-out flex flex-col justify-center gap-3 py-2 ${pretrainSlide === 1 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10 pointer-events-none'}`}>
+                     {m4Data.pretrain.benchmarks.map((bench) => (
+                      <div key={bench.name} className="w-full group">
+                        <div className="flex justify-between items-end mb-1">
+                          <span className="text-xs font-bold text-slate-300 group-hover:text-white transition-colors">{bench.name}</span>
+                          <span className="text-xs font-mono font-black text-white">{bench.score}</span>
+                        </div>
+                        {/* Custom Progress Bar */}
+                        <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden border border-slate-700/50 relative">
+                          <div 
+                            className="h-full rounded-full transition-all duration-1000 relative" 
+                            style={{ width: `${bench.score}%`, backgroundColor: bench.color }}
+                          >
+                             {/* Glossy Effect */}
+                             <div className="absolute top-0 left-0 right-0 h-[50%] bg-white/20 rounded-t-full"></div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                </div>
+              </div>
+
+              {/* Right Column: Post-train (Leaderboard) */}
+              <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl p-4 flex flex-col h-full overflow-hidden">
+                <div className="flex items-center justify-between gap-2 text-purple-300 mb-3 shrink-0">
+                  <div className="flex items-center gap-2">
+                    <Target size={16} />
+                    <h3 className="font-bold uppercase text-xs tracking-wider">Post-train Ladder</h3>
+                  </div>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto pr-2 space-y-2 custom-scrollbar min-h-0">
+                  {m4Data.posttrain.leaderboard.map((item, idx) => (
+                    <div 
+                      key={idx} 
+                      className={`relative flex items-center justify-between p-3 rounded-xl border transition-all ${
+                        item.rank === 1 
+                          ? 'bg-gradient-to-r from-purple-500/20 to-blue-500/10 border-purple-500/50 shadow-[0_0_20px_rgba(168,85,247,0.1)]' 
+                          : 'bg-slate-900/40 border-slate-700/30 hover:border-slate-600/50'
+                      }`}
+                    >
+                      {/* Left: Rank & Name */}
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm shadow-inner shrink-0 ${
+                          item.rank === 1 ? 'bg-purple-600 text-white' : 
+                          item.tag === 'OURS' ? 'bg-blue-600/80 text-white' : 'bg-slate-800 text-slate-500'
+                        }`}>
+                          #{item.rank}
+                        </div>
+                        <div className="min-w-0 flex-1 flex flex-col justify-center">
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-bold text-xs truncate" title={item.model}>
+                              {item.model.length > 28 ? item.model.slice(0, 28) + '...' : item.model}
+                            </span>
+                            {item.tag === 'OURS' && <span className="text-[9px] bg-blue-500 text-white px-1.5 py-0.5 rounded-sm font-bold tracking-wider shrink-0">OURS</span>}
+                            {item.tag === 'BASELINE' && <span className="text-[9px] bg-amber-500 text-white px-1.5 py-0.5 rounded-sm font-bold tracking-wider shrink-0">SOTA</span>}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Right: Detailed Metrics (Side by Side) */}
+                      <div className="flex items-center gap-3 shrink-0 ml-2">
+                         {/* IFEval */}
+                         <div className="flex flex-col items-end hidden sm:flex">
+                            <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">IFEval</span>
+                            <span className="text-xs font-mono font-bold text-slate-300">{item.metrics.IFEval}</span>
+                         </div>
+                         {/* MMLU */}
+                         <div className="flex flex-col items-end hidden sm:flex">
+                            <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">MMLU</span>
+                            <span className="text-xs font-mono font-bold text-slate-300">{item.metrics.MMLU}</span>
+                         </div>
+                         {/* Overall (Highlighted) */}
+                         <div className="flex flex-col items-end bg-slate-800/60 border border-slate-700/50 px-2 py-1 rounded-md min-w-[50px]">
+                            <span className="text-[8px] text-purple-400 font-bold uppercase tracking-wider">Overall</span>
+                            <span className="text-sm font-black font-mono text-white">{item.metrics.overall}</span>
+                         </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -228,6 +406,23 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-6 font-sans flex flex-col gap-6">
+      {/* Scrollbar Styles */}
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background-color: #334155;
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background-color: #475569;
+        }
+      `}</style>
+
       {/* Header */}
       <header className="flex justify-between items-end border-b border-slate-800/60 pb-4 shrink-0">
         <div>
