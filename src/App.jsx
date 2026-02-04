@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, AreaChart, Area, BarChart, Bar
@@ -25,13 +25,86 @@ import {
   TrendingDown
 } from 'lucide-react';
 
-// --- GaugeChart组件定义（移到外部避免重复渲染） ---
-// 优化说明：移除内部 state 和 effect，完全依赖 Recharts 原生动画机制，解决重渲染导致的卡顿
+// --- 静态数据定义（移至组件外，防止父组件重渲染导致子组件不必要的更新） ---
+const M4_DATA = {
+  pretrain: {
+    status: 'Phase 2: Context Extension',
+    lossData: [
+      { step: '0k', val: 6.5 }, { step: '10k', val: 4.2 }, { step: '20k', val: 2.8 },
+      { step: '30k', val: 1.5 }, { step: '40k', val: 0.9 }, { step: '50k', val: 0.24 },
+      { step: '55k', val: 0.21 } 
+    ],
+    currentLoss: 0.210,
+    benchmarks: [
+      { name: 'CMMLU', score: 72.4, color: '#3b82f6' },
+      { name: 'MMLU', score: 68.9, color: '#8b5cf6' },
+      { name: 'BBH', score: 65.2, color: '#ec4899' },
+      { name: 'MATH', score: 58.7, color: '#10b981' },
+    ]
+  },
+  posttrain: {
+    leaderboard: [
+      { 
+        rank: 1, 
+        model: 'Qwen3-235B-A22B-Instruct-2507', 
+        metrics: { overall: 92.3, IFEval: 89.5, MMLU: 88.7 },
+        tag: 'BASELINE' 
+      },
+      { 
+        rank: 2, 
+        model: 'm4_pretrained_full_v2_ensemble_pretrained_full-Qwen3_D_0.7-iter_0006362', 
+        metrics: { overall: 91.8, IFEval: 90.2, MMLU: 87.9 },
+        tag: 'OURS' 
+      },
+      { 
+        rank: 3, 
+        model: 'm4_pretrained_full_v2_ensemble_pretrained_full-Qwen3_D_0.7-iter_0006124', 
+        metrics: { overall: 91.2, IFEval: 89.8, MMLU: 87.3 },
+        tag: 'OURS' 
+      },
+      { 
+        rank: 4, 
+        model: 'm4_pretrained_full_v2_ensemble_pretrained_full-Qwen3_D_0.7-iter_0005891', 
+        metrics: { overall: 90.5, IFEval: 88.9, MMLU: 86.8 },
+        tag: 'OURS' 
+      },
+      { 
+        rank: 5, 
+        model: 'm4_pretrained_full_v2_ensemble_pretrained_full-Qwen3_D_0.7-iter_0005652', 
+        metrics: { overall: 89.9, IFEval: 88.2, MMLU: 86.1 },
+        tag: 'OURS' 
+      },
+    ]
+  }
+};
+
+const CRAWL_DATA = {
+  cn: { total: '1.2T', progress: 85, color: '#ef4444' },
+  en: { total: '850B', progress: 62, color: '#10b981' }
+};
+
+const PRODUCT_METRICS = [
+  { date: '01/26', dau: 12000, pcu: 3200 },
+  { date: '01/27', dau: 13500, pcu: 3800 },
+  { date: '01/28', dau: 11800, pcu: 3100 },
+  { date: '01/29', dau: 15600, pcu: 4500 },
+  { date: '01/30', dau: 18900, pcu: 5200 },
+  { date: '01/31', dau: 21000, pcu: 6100 },
+  { date: '02/01', dau: 19500, pcu: 5800 },
+];
+
+const SHIT_RANKING = [
+  { rank: 1, name: 'CC', amount: '12.5kg', desc: '模型MMLU分数远低于预期。' },
+  { rank: 2, name: 'TT', amount: '8.2kg', desc: 'M4模型幻觉过大' },
+  { rank: 3, name: 'MM', amount: '5.7kg', desc: '项目delay了一周' },
+];
+
+// --- GaugeChart组件定义 ---
 const GaugeChart = React.memo(({ data, label }) => {
-  const chartData = [
+  const chartData = useMemo(() => [
     { name: 'Completed', value: data.progress },
     { name: 'Remaining', value: 100 - data.progress },
-  ];
+  ], [data.progress]);
   
   return (
     <div className="flex flex-col items-center">
@@ -49,9 +122,9 @@ const GaugeChart = React.memo(({ data, label }) => {
               paddingAngle={0}
               dataKey="value"
               isAnimationActive={true}
-              animationDuration={1400} // 延长动画时间，增加丝滑感
-              animationEasing="ease-out" // 使用缓出效果，结束时更自然
-              stroke="none" // 移除边框描边，减少渲染锯齿
+              animationDuration={1500}
+              animationEasing="ease-out"
+              stroke="none"
             >
               <Cell fill={data.color} />
               <Cell fill="#1e293b" />
@@ -81,80 +154,6 @@ const App = () => {
   const [pretrainSlide, setPretrainSlide] = useState(0); // 0: Loss, 1: Benchmarks
   const [currentTime, setCurrentTime] = useState('');
 
-  // --- 模拟数据: M4 模型训练详情 ---
-  const m4Data = {
-    pretrain: {
-      status: 'Phase 2: Context Extension',
-      lossData: [
-        { step: '0k', val: 6.5 }, { step: '10k', val: 4.2 }, { step: '20k', val: 2.8 },
-        { step: '30k', val: 1.5 }, { step: '40k', val: 0.9 }, { step: '50k', val: 0.24 },
-        { step: '55k', val: 0.21 } 
-      ],
-      currentLoss: 0.210,
-      benchmarks: [
-        { name: 'CMMLU', score: 72.4, color: '#3b82f6' },
-        { name: 'MMLU', score: 68.9, color: '#8b5cf6' },
-        { name: 'BBH', score: 65.2, color: '#ec4899' },
-        { name: 'MATH', score: 58.7, color: '#10b981' }, // 新增第4个指标
-      ]
-    },
-    posttrain: {
-      leaderboard: [
-        { 
-          rank: 1, 
-          model: 'Qwen3-235B-A22B-Instruct-2507', 
-          metrics: { overall: 92.3, IFEval: 89.5, MMLU: 88.7 },
-          tag: 'BASELINE' 
-        },
-        { 
-          rank: 2, 
-          model: 'm4_pretrained_full_v2_ensemble_pretrained_full-Qwen3_D_0.7-iter_0006362', 
-          metrics: { overall: 91.8, IFEval: 90.2, MMLU: 87.9 },
-          tag: 'OURS' 
-        },
-        { 
-          rank: 3, 
-          model: 'm4_pretrained_full_v2_ensemble_pretrained_full-Qwen3_D_0.7-iter_0006124', 
-          metrics: { overall: 91.2, IFEval: 89.8, MMLU: 87.3 },
-          tag: 'OURS' 
-        },
-        { 
-          rank: 4, 
-          model: 'm4_pretrained_full_v2_ensemble_pretrained_full-Qwen3_D_0.7-iter_0005891', 
-          metrics: { overall: 90.5, IFEval: 88.9, MMLU: 86.8 },
-          tag: 'OURS' 
-        },
-        { 
-          rank: 5, 
-          model: 'm4_pretrained_full_v2_ensemble_pretrained_full-Qwen3_D_0.7-iter_0005652', 
-          metrics: { overall: 89.9, IFEval: 88.2, MMLU: 86.1 },
-          tag: 'OURS' 
-        },
-      ]
-    }
-  };
-
-  const crawlData = {
-    cn: { total: '1.2T', progress: 85, color: '#ef4444' },
-    en: { total: '850B', progress: 62, color: '#10b981' }
-  };
-
-  const productMetrics = [
-    { date: '01/26', dau: 12000, pcu: 3200 },
-    { date: '01/27', dau: 13500, pcu: 3800 },
-    { date: '01/28', dau: 11800, pcu: 3100 },
-    { date: '01/29', dau: 15600, pcu: 4500 },
-    { date: '01/30', dau: 18900, pcu: 5200 },
-    { date: '01/31', dau: 21000, pcu: 6100 },
-    { date: '02/01', dau: 19500, pcu: 5800 },
-  ];
-
-  const shitRanking = [
-    { rank: 1, name: 'CC', amount: '12.5kg', desc: '模型MMLU分数远低于预期。' },
-    { rank: 2, name: 'TT', amount: '8.2kg', desc: 'M4模型幻觉过大' },
-    { rank: 3, name: 'MM', amount: '5.7kg', desc: '项目delay了一周' },
-  ];
-
   // --- 全局轮播逻辑 (30秒) ---
   const totalSlides = 3;
   useEffect(() => {
@@ -176,7 +175,6 @@ const App = () => {
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
-      // 格式化为 UTC+8 时间：YYYY-MM-DD HH:mm:ss
       const formatter = new Intl.DateTimeFormat('zh-CN', {
         timeZone: 'Asia/Shanghai',
         year: 'numeric',
@@ -221,7 +219,7 @@ const App = () => {
                 <h2 className="text-2xl lg:text-3xl font-bold text-white">LLM Model (M4) Status</h2>
                 <div className="flex items-center gap-2 mt-1">
                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                  <p className="text-slate-400 text-sm lg:text-base font-mono">{m4Data.pretrain.status}</p>
+                  <p className="text-slate-400 text-sm lg:text-base font-mono">{M4_DATA.pretrain.status}</p>
                 </div>
               </div>
             </div>
@@ -252,7 +250,7 @@ const App = () => {
                       <div className="w-[35%] flex flex-col justify-center gap-2">
                          <div>
                             <span className="text-xs lg:text-sm text-slate-500 uppercase font-bold tracking-wider">Current Loss</span>
-                            <div className="text-5xl lg:text-6xl font-black text-white tracking-tighter leading-none mt-1">{m4Data.pretrain.currentLoss}</div>
+                            <div className="text-5xl lg:text-6xl font-black text-white tracking-tighter leading-none mt-1">{M4_DATA.pretrain.currentLoss}</div>
                          </div>
                          <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1.5 rounded-lg w-fit">
                             <TrendingDown size={18} className="text-emerald-400" />
@@ -264,7 +262,7 @@ const App = () => {
                       {/* Right: Area Chart (占据剩余空间，自然变短) */}
                       <div className="flex-1 h-full bg-slate-900/40 rounded-xl border border-slate-700/30 p-2 relative overflow-hidden">
                         <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={m4Data.pretrain.lossData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                          <AreaChart data={M4_DATA.pretrain.lossData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
                             <defs>
                               <linearGradient id="colorLoss" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.5}/>
@@ -294,7 +292,7 @@ const App = () => {
 
                   {/* Slide 1: Benchmarks (4 Items Compact Layout) */}
                   <div className={`absolute inset-0 transition-all duration-700 ease-in-out flex flex-col justify-center gap-4 py-2 ${pretrainSlide === 1 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10 pointer-events-none'}`}>
-                     {m4Data.pretrain.benchmarks.map((bench) => (
+                     {M4_DATA.pretrain.benchmarks.map((bench) => (
                       <div key={bench.name} className="w-full group">
                         <div className="flex justify-between items-end mb-2">
                           <span className="text-sm lg:text-base font-bold text-slate-300 group-hover:text-white transition-colors">{bench.name}</span>
@@ -327,7 +325,7 @@ const App = () => {
                 </div>
                 
                 <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar min-h-0">
-                  {m4Data.posttrain.leaderboard.map((item, idx) => (
+                  {M4_DATA.posttrain.leaderboard.map((item, idx) => (
                     <div 
                       key={idx} 
                       className={`relative flex items-center justify-between p-4 rounded-xl border transition-all ${
@@ -393,9 +391,9 @@ const App = () => {
               </div>
             </div>
             <div className="flex flex-col md:flex-row justify-around items-center gap-8 py-4">
-              <GaugeChart data={crawlData.cn} label="CN_Broad Crawl" />
+              <GaugeChart data={CRAWL_DATA.cn} label="CN_Broad Crawl" />
               <div className="hidden md:block h-32 w-[1px] bg-gradient-to-b from-transparent via-slate-600 to-transparent"></div>
-              <GaugeChart data={crawlData.en} label="EN_Broad_Crawl" />
+              <GaugeChart data={CRAWL_DATA.en} label="EN_Broad_Crawl" />
             </div>
           </div>
         );
@@ -425,7 +423,7 @@ const App = () => {
             </div>
             <div className="flex-1 min-h-0">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={productMetrics} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                <LineChart data={PRODUCT_METRICS} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                   <XAxis dataKey="date" stroke="#64748b" tickLine={false} axisLine={false} dy={10} />
                   <YAxis stroke="#64748b" tickLine={false} axisLine={false} tickFormatter={(v) => `${v/1000}k`} />
@@ -523,7 +521,7 @@ const App = () => {
             </div>
             
             <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-              {shitRanking.map((item) => (
+              {SHIT_RANKING.map((item) => (
                 <div key={item.rank} className="relative bg-slate-950/80 p-4 rounded-xl border border-slate-800/60 group hover:border-amber-900/50 transition-colors">
                   <div className="flex justify-between items-start">
                     <div className="flex gap-4">
