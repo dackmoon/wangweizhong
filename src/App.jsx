@@ -25,10 +25,61 @@ import {
   TrendingDown
 } from 'lucide-react';
 
+// --- GaugeChart组件定义（移到外部避免重复渲染） ---
+// 优化说明：移除内部 state 和 effect，完全依赖 Recharts 原生动画机制，解决重渲染导致的卡顿
+const GaugeChart = React.memo(({ data, label }) => {
+  const chartData = [
+    { name: 'Completed', value: data.progress },
+    { name: 'Remaining', value: 100 - data.progress },
+  ];
+  
+  return (
+    <div className="flex flex-col items-center">
+      <div className="relative w-48 h-48">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={chartData}
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={80}
+              startAngle={225}
+              endAngle={-45}
+              paddingAngle={0}
+              dataKey="value"
+              isAnimationActive={true}
+              animationDuration={1400} // 延长动画时间，增加丝滑感
+              animationEasing="ease-out" // 使用缓出效果，结束时更自然
+              stroke="none" // 移除边框描边，减少渲染锯齿
+            >
+              <Cell fill={data.color} />
+              <Cell fill="#1e293b" />
+            </Pie>
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-3xl font-bold text-white tracking-tighter">{data.total}</span>
+          <span className="text-xs text-slate-400 uppercase tracking-widest mt-1">Tokens</span>
+        </div>
+      </div>
+      <div className="mt-[-20px] text-center relative z-10">
+        <div className="bg-slate-800/80 backdrop-blur px-3 py-1 rounded-full border border-slate-700 inline-block">
+          <p className="text-sm font-medium text-slate-200">{label}</p>
+        </div>
+        <p className="text-2xl font-black mt-2" style={{ color: data.color }}>{data.progress}%</p>
+      </div>
+    </div>
+  );
+});
+
+GaugeChart.displayName = 'GaugeChart';
+
 const App = () => {
   // --- 状态管理 ---
   const [currentSlide, setCurrentSlide] = useState(0);
   const [pretrainSlide, setPretrainSlide] = useState(0); // 0: Loss, 1: Benchmarks
+  const [currentTime, setCurrentTime] = useState('');
 
   // --- 模拟数据: M4 模型训练详情 ---
   const m4Data = {
@@ -121,53 +172,42 @@ const App = () => {
     return () => clearInterval(timer);
   }, []);
 
+  // --- 实时时间更新 (UTC+8) ---
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      // 格式化为 UTC+8 时间：YYYY-MM-DD HH:mm:ss
+      const formatter = new Intl.DateTimeFormat('zh-CN', {
+        timeZone: 'Asia/Shanghai',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+      
+      const parts = formatter.formatToParts(now);
+      const year = parts.find(p => p.type === 'year').value;
+      const month = parts.find(p => p.type === 'month').value;
+      const day = parts.find(p => p.type === 'day').value;
+      const hour = parts.find(p => p.type === 'hour').value;
+      const minute = parts.find(p => p.type === 'minute').value;
+      const second = parts.find(p => p.type === 'second').value;
+      
+      setCurrentTime(`${year}-${month}-${day} ${hour}:${minute}:${second}`);
+    };
+    
+    updateTime(); // 立即执行一次
+    const timer = setInterval(updateTime, 1000); // 每秒更新
+    return () => clearInterval(timer);
+  }, []);
+
   const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % totalSlides);
   const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
 
-  // --- 组件渲染 ---
-
-  const GaugeChart = ({ data, label }) => {
-    const chartData = [
-      { name: 'Completed', value: data.progress },
-      { name: 'Remaining', value: 100 - data.progress },
-    ];
-    return (
-      <div className="flex flex-col items-center">
-        <div className="relative w-48 h-48">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={chartData}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={80}
-                startAngle={225}
-                endAngle={-45}
-                paddingAngle={0}
-                dataKey="value"
-              >
-                <Cell fill={data.color} stroke="none" />
-                <Cell fill="#1e293b" stroke="none" />
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-3xl font-bold text-white tracking-tighter">{data.total}</span>
-            <span className="text-xs text-slate-400 uppercase tracking-widest mt-1">Tokens</span>
-          </div>
-        </div>
-        <div className="mt-[-20px] text-center relative z-10">
-          <div className="bg-slate-800/80 backdrop-blur px-3 py-1 rounded-full border border-slate-700 inline-block">
-            <p className="text-sm font-medium text-slate-200">{label}</p>
-          </div>
-          <p className="text-2xl font-black mt-2" style={{ color: data.color }}>{data.progress}%</p>
-        </div>
-      </div>
-    );
-  };
-
-  // 轮播内容渲染
+  // --- 轮播内容渲染 ---
   const renderSlideContent = () => {
     switch (currentSlide) {
       case 0: // LLM M4 训练详情
@@ -178,10 +218,10 @@ const App = () => {
                 <Cpu className="text-blue-400 w-8 h-8" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white">LLM Model (M4) Status</h2>
-                <div className="flex items-center gap-2">
+                <h2 className="text-2xl lg:text-3xl font-bold text-white">LLM Model (M4) Status</h2>
+                <div className="flex items-center gap-2 mt-1">
                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                  <p className="text-slate-400 text-sm font-mono">{m4Data.pretrain.status}</p>
+                  <p className="text-slate-400 text-sm lg:text-base font-mono">{m4Data.pretrain.status}</p>
                 </div>
               </div>
             </div>
@@ -189,11 +229,11 @@ const App = () => {
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-8 min-h-0 pb-4">
               
               {/* Left Column: Pre-train (Internal Carousel) */}
-              <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl p-4 flex flex-col relative overflow-hidden group">
-                <div className="flex items-center justify-between gap-2 text-blue-300 mb-3 shrink-0 z-20">
+              <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl p-6 flex flex-col relative overflow-hidden group">
+                <div className="flex items-center justify-between gap-2 text-blue-300 mb-6 shrink-0 z-20">
                   <div className="flex items-center gap-2">
-                    <Activity size={16} />
-                    <h3 className="font-bold uppercase text-xs tracking-wider">Pre-train Metrics</h3>
+                    <Activity size={20} />
+                    <h3 className="font-bold uppercase text-sm lg:text-base tracking-wider">Pre-train Metrics</h3>
                   </div>
                   {/* Internal Carousel Indicators */}
                   <div className="flex gap-1.5">
@@ -205,24 +245,24 @@ const App = () => {
                 {/* Internal Carousel Content Area */}
                 <div className="flex-1 relative w-full min-h-0">
                   
-                  {/* Slide 0: Loss Chart (Compacted Layout) */}
+                  {/* Slide 0: Loss Chart (Expanded Layout for Big Screen) */}
                   <div className={`absolute inset-0 transition-all duration-700 ease-in-out ${pretrainSlide === 0 ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10 pointer-events-none'}`}>
-                    <div className="flex h-full items-center gap-3">
-                      {/* Left: Stats */}
-                      <div className="min-w-[90px] flex flex-col justify-center gap-1">
+                    <div className="flex h-full items-center gap-6">
+                      {/* Left: Stats - 增加宽度占比，放大文字 */}
+                      <div className="w-[35%] flex flex-col justify-center gap-2">
                          <div>
-                            <span className="text-[9px] text-slate-500 uppercase font-bold tracking-wider">Current Loss</span>
-                            <div className="text-3xl font-black text-white tracking-tighter leading-none">{m4Data.pretrain.currentLoss}</div>
+                            <span className="text-xs lg:text-sm text-slate-500 uppercase font-bold tracking-wider">Current Loss</span>
+                            <div className="text-5xl lg:text-6xl font-black text-white tracking-tighter leading-none mt-1">{m4Data.pretrain.currentLoss}</div>
                          </div>
-                         <div className="flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-lg w-fit">
-                            <TrendingDown size={12} className="text-emerald-400" />
-                            <span className="text-[10px] font-bold text-emerald-400">12%</span>
+                         <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1.5 rounded-lg w-fit">
+                            <TrendingDown size={18} className="text-emerald-400" />
+                            <span className="text-sm lg:text-base font-bold text-emerald-400">12%</span>
                          </div>
-                         <p className="text-[9px] text-slate-500 font-mono leading-tight">vs. 10k ago</p>
+                         <p className="text-xs lg:text-sm text-slate-500 font-mono leading-tight">vs. 10k ago</p>
                       </div>
 
-                      {/* Right: Area Chart (Full Height) */}
-                      <div className="flex-1 h-full bg-slate-900/40 rounded-xl border border-slate-700/30 p-1 relative overflow-hidden">
+                      {/* Right: Area Chart (占据剩余空间，自然变短) */}
+                      <div className="flex-1 h-full bg-slate-900/40 rounded-xl border border-slate-700/30 p-2 relative overflow-hidden">
                         <ResponsiveContainer width="100%" height="100%">
                           <AreaChart data={m4Data.pretrain.lossData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
                             <defs>
@@ -234,7 +274,7 @@ const App = () => {
                             <Tooltip 
                               cursor={{ stroke: '#fff', strokeWidth: 1, strokeDasharray: '4 4' }}
                               contentStyle={{backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', padding: '8px'}} 
-                              itemStyle={{fontSize: 10, fontWeight: 'bold', color: '#fff'}}
+                              itemStyle={{fontSize: 12, fontWeight: 'bold', color: '#fff'}}
                               labelStyle={{display: 'none'}}
                               formatter={(value) => [value, 'Loss']}
                             />
@@ -242,7 +282,7 @@ const App = () => {
                               type="monotone" 
                               dataKey="val" 
                               stroke="#3b82f6" 
-                              strokeWidth={2}
+                              strokeWidth={3}
                               fill="url(#colorLoss)" 
                               animationDuration={1500}
                             />
@@ -253,15 +293,15 @@ const App = () => {
                   </div>
 
                   {/* Slide 1: Benchmarks (4 Items Compact Layout) */}
-                  <div className={`absolute inset-0 transition-all duration-700 ease-in-out flex flex-col justify-center gap-3 py-2 ${pretrainSlide === 1 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10 pointer-events-none'}`}>
+                  <div className={`absolute inset-0 transition-all duration-700 ease-in-out flex flex-col justify-center gap-4 py-2 ${pretrainSlide === 1 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10 pointer-events-none'}`}>
                      {m4Data.pretrain.benchmarks.map((bench) => (
                       <div key={bench.name} className="w-full group">
-                        <div className="flex justify-between items-end mb-1">
-                          <span className="text-xs font-bold text-slate-300 group-hover:text-white transition-colors">{bench.name}</span>
-                          <span className="text-xs font-mono font-black text-white">{bench.score}</span>
+                        <div className="flex justify-between items-end mb-2">
+                          <span className="text-sm lg:text-base font-bold text-slate-300 group-hover:text-white transition-colors">{bench.name}</span>
+                          <span className="text-sm lg:text-base font-mono font-black text-white">{bench.score}</span>
                         </div>
                         {/* Custom Progress Bar */}
-                        <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden border border-slate-700/50 relative">
+                        <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden border border-slate-700/50 relative">
                           <div 
                             className="h-full rounded-full transition-all duration-1000 relative" 
                             style={{ width: `${bench.score}%`, backgroundColor: bench.color }}
@@ -278,27 +318,27 @@ const App = () => {
               </div>
 
               {/* Right Column: Post-train (Leaderboard) */}
-              <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl p-4 flex flex-col h-full overflow-hidden">
-                <div className="flex items-center justify-between gap-2 text-purple-300 mb-3 shrink-0">
+              <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl p-6 flex flex-col h-full overflow-hidden">
+                <div className="flex items-center justify-between gap-2 text-purple-300 mb-4 shrink-0">
                   <div className="flex items-center gap-2">
-                    <Target size={16} />
-                    <h3 className="font-bold uppercase text-xs tracking-wider">Post-train Ladder</h3>
+                    <Target size={20} />
+                    <h3 className="font-bold uppercase text-sm lg:text-base tracking-wider">Post-train Ladder</h3>
                   </div>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto pr-2 space-y-2 custom-scrollbar min-h-0">
+                <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar min-h-0">
                   {m4Data.posttrain.leaderboard.map((item, idx) => (
                     <div 
                       key={idx} 
-                      className={`relative flex items-center justify-between p-3 rounded-xl border transition-all ${
+                      className={`relative flex items-center justify-between p-4 rounded-xl border transition-all ${
                         item.rank === 1 
                           ? 'bg-gradient-to-r from-purple-500/20 to-blue-500/10 border-purple-500/50 shadow-[0_0_20px_rgba(168,85,247,0.1)]' 
                           : 'bg-slate-900/40 border-slate-700/30 hover:border-slate-600/50'
                       }`}
                     >
                       {/* Left: Rank & Name */}
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm shadow-inner shrink-0 ${
+                      <div className="flex items-center gap-4 min-w-0 flex-1">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-black text-lg shadow-inner shrink-0 ${
                           item.rank === 1 ? 'bg-purple-600 text-white' : 
                           item.tag === 'OURS' ? 'bg-blue-600/80 text-white' : 'bg-slate-800 text-slate-500'
                         }`}>
@@ -306,31 +346,31 @@ const App = () => {
                         </div>
                         <div className="min-w-0 flex-1 flex flex-col justify-center">
                           <div className="flex items-center gap-2">
-                            <span className="text-white font-bold text-xs truncate" title={item.model}>
+                            <span className="text-white font-bold text-sm lg:text-base truncate" title={item.model}>
                               {item.model.length > 28 ? item.model.slice(0, 28) + '...' : item.model}
                             </span>
-                            {item.tag === 'OURS' && <span className="text-[9px] bg-blue-500 text-white px-1.5 py-0.5 rounded-sm font-bold tracking-wider shrink-0">OURS</span>}
-                            {item.tag === 'BASELINE' && <span className="text-[9px] bg-amber-500 text-white px-1.5 py-0.5 rounded-sm font-bold tracking-wider shrink-0">SOTA</span>}
+                            {item.tag === 'OURS' && <span className="text-[10px] bg-blue-500 text-white px-2 py-0.5 rounded-sm font-bold tracking-wider shrink-0">OURS</span>}
+                            {item.tag === 'BASELINE' && <span className="text-[10px] bg-amber-500 text-white px-2 py-0.5 rounded-sm font-bold tracking-wider shrink-0">BASE</span>}
                           </div>
                         </div>
                       </div>
                       
                       {/* Right: Detailed Metrics (Side by Side) */}
-                      <div className="flex items-center gap-3 shrink-0 ml-2">
+                      <div className="flex items-center gap-4 shrink-0 ml-4">
                          {/* IFEval */}
-                         <div className="flex flex-col items-end hidden sm:flex">
-                            <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">IFEval</span>
-                            <span className="text-xs font-mono font-bold text-slate-300">{item.metrics.IFEval}</span>
+                         <div className="flex flex-col items-end hidden xl:flex">
+                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">IFEval</span>
+                            <span className="text-sm font-mono font-bold text-slate-300">{item.metrics.IFEval}</span>
                          </div>
                          {/* MMLU */}
-                         <div className="flex flex-col items-end hidden sm:flex">
-                            <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">MMLU</span>
-                            <span className="text-xs font-mono font-bold text-slate-300">{item.metrics.MMLU}</span>
+                         <div className="flex flex-col items-end hidden xl:flex">
+                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">MMLU</span>
+                            <span className="text-sm font-mono font-bold text-slate-300">{item.metrics.MMLU}</span>
                          </div>
                          {/* Overall (Highlighted) */}
-                         <div className="flex flex-col items-end bg-slate-800/60 border border-slate-700/50 px-2 py-1 rounded-md min-w-[50px]">
-                            <span className="text-[8px] text-purple-400 font-bold uppercase tracking-wider">Overall</span>
-                            <span className="text-sm font-black font-mono text-white">{item.metrics.overall}</span>
+                         <div className="flex flex-col items-end bg-slate-800/60 border border-slate-700/50 px-3 py-1.5 rounded-md min-w-[60px]">
+                            <span className="text-[10px] text-purple-400 font-bold uppercase tracking-wider">Overall</span>
+                            <span className="text-lg font-black font-mono text-white">{item.metrics.overall}</span>
                          </div>
                       </div>
                     </div>
@@ -436,7 +476,7 @@ const App = () => {
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
             <span className="text-xs font-mono font-bold text-emerald-500">SYSTEM ONLINE</span>
           </div>
-          <span className="text-slate-500 font-mono text-sm hidden md:block">2026-02-02 10:45:00</span>
+          <span className="text-slate-500 font-mono text-sm hidden md:block">{currentTime}</span>
         </div>
       </header>
 
