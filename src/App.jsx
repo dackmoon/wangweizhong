@@ -22,19 +22,38 @@ import {
   BarChart2,
   Target,
   Circle,
-  TrendingDown
+  TrendingDown,
+  Hash
 } from 'lucide-react';
 
-// --- 静态数据定义（移至组件外，防止父组件重渲染导致子组件不必要的更新） ---
+// --- 静态数据定义 ---
 const M4_DATA = {
   pretrain: {
     status: 'Phase 2: Context Extension',
     lossData: [
-      { step: '0k', val: 6.5 }, { step: '10k', val: 4.2 }, { step: '20k', val: 2.8 },
-      { step: '30k', val: 1.5 }, { step: '40k', val: 0.9 }, { step: '50k', val: 0.24 },
-      { step: '55k', val: 0.21 } 
+      { step: 0, val: 0.0100 }, 
+      { step: 10000, val: 0.0085 }, 
+      { step: 20000, val: 0.0070 }, 
+      { step: 30000, val: 0.0059 }, 
+      { step: 40000, val: 0.0048 }, 
+      { step: 50000, val: 0.0041 }, 
+      { step: 60000, val: 0.0035 }, 
+      { step: 70000, val: 0.0030 }, 
+      { step: 80000, val: 0.0026 }, 
+      { step: 90000, val: 0.0023 }, 
+      { step: 100000, val: 0.0020 }, 
+      { step: 110000, val: 0.0018 }, 
+      { step: 120000, val: 0.0016 }, 
+      { step: 130000, val: 0.0015 }, 
+      { step: 140000, val: 0.0013 }, 
+      { step: 150000, val: 0.0012 }, 
+      { step: 160000, val: 0.0011 }, 
+      { step: 170000, val: 0.0010 }, 
+      { step: 180000, val: 0.0010 },
+      { step: 190000, val: 0.0009 },
+      { step: 200000, val: 0.0009 } 
     ],
-    currentLoss: 0.210,
+    currentLoss: 0.0009,
     benchmarks: [
       { name: 'CMMLU', score: 72.4, color: '#3b82f6' },
       { name: 'MMLU', score: 68.9, color: '#8b5cf6' },
@@ -43,35 +62,49 @@ const M4_DATA = {
     ]
   },
   posttrain: {
+    // 扩充了模型列表和指标维度
     leaderboard: [
       { 
         rank: 1, 
-        model: 'Qwen3-235B-A22B-Instruct-2507', 
-        metrics: { overall: 92.3, IFEval: 89.5, MMLU: 88.7 },
+        model: 'Qwen3-235B-A22B-Instruct', 
+        metrics: { overall: 92.3, IFEval: 89.5, MMLU: 88.7, Hella: 95.2, GPQA: 68.5, Math: 82.1, Rule: 89.9 },
         tag: 'BASELINE' 
       },
       { 
         rank: 2, 
-        model: 'm4_pretrained_full_v2_ensemble_pretrained_full-Qwen3_D_0.7-iter_0006362', 
-        metrics: { overall: 91.8, IFEval: 90.2, MMLU: 87.9 },
+        // 使用长命名示例进行测试
+        model: 'M4D1p5_pretrain_lr2.27e-4_20260113_lcauxloss1p5_v1.1.1_autoeval', 
+        metrics: { overall: 91.8, IFEval: 90.2, MMLU: 87.9, Hella: 94.8, GPQA: 67.2, Math: 81.5, Rule: 88.4 },
         tag: 'OURS' 
       },
       { 
         rank: 3, 
-        model: 'm4_pretrained_full_v2_ensemble_pretrained_full-Qwen3_D_0.7-iter_0006124', 
-        metrics: { overall: 91.2, IFEval: 89.8, MMLU: 87.3 },
-        tag: 'OURS' 
+        model: 'GPT-4o-2024-05-13', 
+        metrics: { overall: 91.5, IFEval: 88.5, MMLU: 88.2, Hella: 94.5, GPQA: 69.1, Math: 80.9, Rule: 87.8 },
+        tag: 'SOTA' 
       },
       { 
         rank: 4, 
-        model: 'm4_pretrained_full_v2_ensemble_pretrained_full-Qwen3_D_0.7-iter_0005891', 
-        metrics: { overall: 90.5, IFEval: 88.9, MMLU: 86.8 },
+        model: 'm4_full_v2_ensemble_iter_6124', 
+        metrics: { overall: 91.2, IFEval: 89.8, MMLU: 87.3, Hella: 93.9, GPQA: 66.8, Math: 80.2, Rule: 87.1 },
         tag: 'OURS' 
       },
       { 
         rank: 5, 
-        model: 'm4_pretrained_full_v2_ensemble_pretrained_full-Qwen3_D_0.7-iter_0005652', 
-        metrics: { overall: 89.9, IFEval: 88.2, MMLU: 86.1 },
+        model: 'Claude 3.5 Sonnet', 
+        metrics: { overall: 90.8, IFEval: 89.1, MMLU: 86.5, Hella: 93.5, GPQA: 65.9, Math: 79.8, Rule: 88.2 },
+        tag: 'SOTA' 
+      },
+      { 
+        rank: 6, 
+        model: 'm4_full_v2_ensemble_iter_5891', 
+        metrics: { overall: 90.5, IFEval: 88.9, MMLU: 86.8, Hella: 93.1, GPQA: 65.5, Math: 79.1, Rule: 86.5 },
+        tag: 'OURS' 
+      },
+      { 
+        rank: 7, 
+        model: 'm4_full_v2_ensemble_iter_5652', 
+        metrics: { overall: 89.9, IFEval: 88.2, MMLU: 86.1, Hella: 92.8, GPQA: 64.9, Math: 78.5, Rule: 85.9 },
         tag: 'OURS' 
       },
     ]
@@ -211,7 +244,7 @@ const App = () => {
       case 0: // LLM M4 训练详情
         return (
           <div className="h-full flex flex-col px-8 animate-fade-in">
-             <div className="flex items-center gap-3 mb-6 shrink-0">
+             <div className="flex items-center gap-3 mb-4 shrink-0">
               <div className="p-3 bg-blue-500/20 rounded-xl">
                 <Cpu className="text-blue-400 w-8 h-8" />
               </div>
@@ -224,10 +257,10 @@ const App = () => {
               </div>
             </div>
 
-            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-8 min-h-0 pb-4">
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 min-h-0 pb-4">
               
               {/* Left Column: Pre-train (Internal Carousel) */}
-              <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl p-6 flex flex-col relative overflow-hidden group">
+              <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl p-6 flex flex-col relative overflow-hidden group shadow-lg">
                 <div className="flex items-center justify-between gap-2 text-blue-300 mb-6 shrink-0 z-20">
                   <div className="flex items-center gap-2">
                     <Activity size={20} />
@@ -243,11 +276,11 @@ const App = () => {
                 {/* Internal Carousel Content Area */}
                 <div className="flex-1 relative w-full min-h-0">
                   
-                  {/* Slide 0: Loss Chart (Expanded Layout for Big Screen) */}
+                  {/* Slide 0: Loss Chart */}
                   <div className={`absolute inset-0 transition-all duration-700 ease-in-out ${pretrainSlide === 0 ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10 pointer-events-none'}`}>
                     <div className="flex h-full items-center gap-6">
-                      {/* Left: Stats - 增加宽度占比，放大文字 */}
-                      <div className="w-[35%] flex flex-col justify-center gap-2">
+                      {/* Left: Stats - Centered Content */}
+                      <div className="w-[35%] flex flex-col justify-center items-center text-center gap-2">
                          <div>
                             <span className="text-xs lg:text-sm text-slate-500 uppercase font-bold tracking-wider">Current Loss</span>
                             <div className="text-5xl lg:text-6xl font-black text-white tracking-tighter leading-none mt-1">{M4_DATA.pretrain.currentLoss}</div>
@@ -258,23 +291,45 @@ const App = () => {
                          </div>
                          <p className="text-xs lg:text-sm text-slate-500 font-mono leading-tight">vs. 10k ago</p>
                       </div>
-
-                      {/* Right: Area Chart (占据剩余空间，自然变短) */}
+                      
+                      {/* Right: Area Chart - With Axes */}
                       <div className="flex-1 h-full bg-slate-900/40 rounded-xl border border-slate-700/30 p-2 relative overflow-hidden">
                         <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={M4_DATA.pretrain.lossData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                          <AreaChart data={M4_DATA.pretrain.lossData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                             <defs>
                               <linearGradient id="colorLoss" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.5}/>
                                 <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                               </linearGradient>
                             </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} vertical={false} />
+                            <XAxis 
+                              dataKey="step" 
+                              type="number"
+                              domain={[0, 200000]}
+                              ticks={[0, 50000, 100000, 150000, 200000]}
+                              tickFormatter={(value) => `${value/1000}k`}
+                              stroke="#64748b" 
+                              fontSize={10}
+                              tickLine={false}
+                              axisLine={false}
+                              dy={10}
+                            />
+                            <YAxis 
+                              stroke="#64748b" 
+                              fontSize={10}
+                              tickLine={false}
+                              axisLine={false}
+                              domain={[0, 'auto']}
+                              tickCount={5}
+                            />
                             <Tooltip 
                               cursor={{ stroke: '#fff', strokeWidth: 1, strokeDasharray: '4 4' }}
                               contentStyle={{backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', padding: '8px'}} 
                               itemStyle={{fontSize: 12, fontWeight: 'bold', color: '#fff'}}
                               labelStyle={{display: 'none'}}
                               formatter={(value) => [value, 'Loss']}
+                              labelFormatter={(value) => `Step: ${value}`}
                             />
                             <Area 
                               type="monotone" 
@@ -290,7 +345,7 @@ const App = () => {
                     </div>
                   </div>
 
-                  {/* Slide 1: Benchmarks (4 Items Compact Layout) */}
+                  {/* Slide 1: Benchmarks */}
                   <div className={`absolute inset-0 transition-all duration-700 ease-in-out flex flex-col justify-center gap-4 py-2 ${pretrainSlide === 1 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10 pointer-events-none'}`}>
                      {M4_DATA.pretrain.benchmarks.map((bench) => (
                       <div key={bench.name} className="w-full group">
@@ -298,13 +353,11 @@ const App = () => {
                           <span className="text-sm lg:text-base font-bold text-slate-300 group-hover:text-white transition-colors">{bench.name}</span>
                           <span className="text-sm lg:text-base font-mono font-black text-white">{bench.score}</span>
                         </div>
-                        {/* Custom Progress Bar */}
                         <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden border border-slate-700/50 relative">
                           <div 
                             className="h-full rounded-full transition-all duration-1000 relative" 
                             style={{ width: `${bench.score}%`, backgroundColor: bench.color }}
                           >
-                             {/* Glossy Effect */}
                              <div className="absolute top-0 left-0 right-0 h-[50%] bg-white/20 rounded-t-full"></div>
                           </div>
                         </div>
@@ -315,61 +368,62 @@ const App = () => {
                 </div>
               </div>
 
-              {/* Right Column: Post-train (Leaderboard) */}
-              <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl p-6 flex flex-col h-full overflow-hidden">
-                <div className="flex items-center justify-between gap-2 text-purple-300 mb-4 shrink-0">
+              {/* Right Column: Post-train (Leaderboard) - Refactored for Density and Layout */}
+              <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl flex flex-col h-full overflow-hidden shadow-lg">
+                <div className="flex items-center justify-between gap-2 text-purple-300 p-4 pb-2 shrink-0 bg-slate-800/20 border-b border-slate-700/30">
                   <div className="flex items-center gap-2">
                     <Target size={20} />
                     <h3 className="font-bold uppercase text-sm lg:text-base tracking-wider">Post-train Ladder</h3>
                   </div>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar min-h-0">
+                <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0">
                   {M4_DATA.posttrain.leaderboard.map((item, idx) => (
                     <div 
                       key={idx} 
-                      className={`relative flex items-center justify-between p-4 rounded-xl border transition-all ${
-                        item.rank === 1 
-                          ? 'bg-gradient-to-r from-purple-500/20 to-blue-500/10 border-purple-500/50 shadow-[0_0_20px_rgba(168,85,247,0.1)]' 
-                          : 'bg-slate-900/40 border-slate-700/30 hover:border-slate-600/50'
-                      }`}
+                      className={`group flex items-center justify-between px-4 py-4 border-b border-slate-700/50 last:border-0 transition-colors hover:bg-slate-700/20`}
                     >
-                      {/* Left: Rank & Name */}
-                      <div className="flex items-center gap-4 min-w-0 flex-1">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-black text-lg shadow-inner shrink-0 ${
+                      {/* Left: Rank & Name - Width increased to 35% for long names */}
+                      <div className="flex items-center gap-3 w-[35%] shrink-0">
+                        <div className={`w-6 h-6 rounded flex items-center justify-center font-black text-xs shadow-sm shrink-0 ${
                           item.rank === 1 ? 'bg-purple-600 text-white' : 
-                          item.tag === 'OURS' ? 'bg-blue-600/80 text-white' : 'bg-slate-800 text-slate-500'
+                          item.rank <= 3 ? 'bg-slate-700 text-white' : 'bg-slate-800/50 text-slate-500'
                         }`}>
-                          #{item.rank}
+                          {item.rank}
                         </div>
-                        <div className="min-w-0 flex-1 flex flex-col justify-center">
-                          <div className="flex items-center gap-2">
-                            <span className="text-white font-bold text-sm lg:text-base truncate" title={item.model}>
-                              {item.model.length > 28 ? item.model.slice(0, 28) + '...' : item.model}
+                        <div className="min-w-0 flex flex-col justify-center overflow-hidden">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            {/* break-all and leading-tight added for wrapping long names */}
+                            <span className={`font-bold text-sm break-all leading-tight ${item.tag === 'OURS' ? 'text-white' : 'text-slate-300'}`} title={item.model}>
+                              {item.model}
                             </span>
-                            {item.tag === 'OURS' && <span className="text-[10px] bg-blue-500 text-white px-2 py-0.5 rounded-sm font-bold tracking-wider shrink-0">OURS</span>}
-                            {item.tag === 'BASELINE' && <span className="text-[10px] bg-amber-500 text-white px-2 py-0.5 rounded-sm font-bold tracking-wider shrink-0">BASE</span>}
+                            {/* Tags inline after name */}
+                            {item.tag === 'OURS' && <span className="text-[8px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-1 py-0.5 rounded-sm font-bold tracking-wider leading-none">OURS</span>}
+                            {item.tag === 'BASELINE' && <span className="text-[8px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1 py-0.5 rounded-sm font-bold tracking-wider leading-none">BASE</span>}
+                            {item.tag === 'SOTA' && <span className="text-[8px] bg-slate-600/30 text-slate-400 border border-slate-600/50 px-1 py-0.5 rounded-sm font-bold tracking-wider leading-none">SOTA</span>}
                           </div>
                         </div>
                       </div>
                       
-                      {/* Right: Detailed Metrics (Side by Side) */}
-                      <div className="flex items-center gap-4 shrink-0 ml-4">
-                         {/* IFEval */}
-                         <div className="flex flex-col items-end hidden xl:flex">
-                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">IFEval</span>
-                            <span className="text-sm font-mono font-bold text-slate-300">{item.metrics.IFEval}</span>
-                         </div>
-                         {/* MMLU */}
-                         <div className="flex flex-col items-end hidden xl:flex">
-                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">MMLU</span>
-                            <span className="text-sm font-mono font-bold text-slate-300">{item.metrics.MMLU}</span>
-                         </div>
-                         {/* Overall (Highlighted) */}
-                         <div className="flex flex-col items-end bg-slate-800/60 border border-slate-700/50 px-3 py-1.5 rounded-md min-w-[60px]">
-                            <span className="text-[10px] text-purple-400 font-bold uppercase tracking-wider">Overall</span>
-                            <span className="text-lg font-black font-mono text-white">{item.metrics.overall}</span>
-                         </div>
+                      {/* Middle: Detailed Metrics Grid - Expanded space (flex-1), Larger Fonts */}
+                      <div className="flex-1 flex justify-between gap-2 px-4 border-l border-slate-700/30 h-full items-center">
+                          {['Hella', 'GPQA', 'Math', 'Rule', 'IFEval', 'MMLU'].map(metric => (
+                            <div key={metric} className="flex flex-col items-center">
+                              <span className="text-[9px] text-slate-500 font-bold uppercase mb-1 group-hover:text-slate-400 transition-colors">{metric}</span>
+                              {/* Increased score font size to text-lg */}
+                              <span className={`text-lg font-mono font-bold leading-none ${item.metrics[metric] > 90 ? 'text-emerald-400' : 'text-slate-300'}`}>
+                                {item.metrics[metric]}
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+
+                      {/* Right: Overall Score */}
+                      <div className="w-[85px] flex flex-col items-end pl-4 border-l border-slate-700/30 shrink-0">
+                         <span className="text-[9px] text-purple-400/80 font-bold uppercase tracking-wider mb-1">Overall</span>
+                         <span className={`text-2xl font-black font-mono tracking-tight leading-none ${item.rank === 1 ? 'text-purple-400' : 'text-white'}`}>
+                           {item.metrics.overall}
+                         </span>
                       </div>
                     </div>
                   ))}
